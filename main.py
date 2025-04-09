@@ -89,6 +89,14 @@ class ElementDiff:
         self.state = state
         self.element_type = element_type
 
+    def __repr__(self):
+        ...
+        return f"Elements {self.paths} state {self.state}"
+
+    def __str__(self):
+        ...
+        return f"Elements {self.paths} state {self.state}"
+
 
 def compare_files(file1: File, file2: File, logger: Logger):
     """Compare files by date of last modification, size and name
@@ -128,8 +136,8 @@ def compare_dirs(source_dir: Dir, replica_dir: Dir, logger: Logger):
             if element.name not in [elem.name for elem in replica_dir.content]:
                 changed_files.append(ElementDiff(element.path, "added", 'dir'))
             elif element.name in [elem.name for elem in replica_dir.content]:
-                dirs_compare = compare_dirs([elem for elem in replica_dir.content if elem.name == element.name][0],
-                                             element, logger)
+                dirs_compare = compare_dirs(element, [elem for elem in replica_dir.content
+                                                      if elem.name == element.name][0], logger)
                 if len(dirs_compare) != 0:
                     changed_files.append(ElementDiff(dirs_compare, "modified", 'dir'))
             else:
@@ -137,10 +145,11 @@ def compare_dirs(source_dir: Dir, replica_dir: Dir, logger: Logger):
 
     for element in replica_dir.content:
         if element.name not in [elem.name for elem in source_dir.content]:
+            a = 1
             if isinstance(element, File):
                 changed_files.append(ElementDiff(element.path, "deleted"))
             elif isinstance(element, Dir):
-                changed_files.append(ElementDiff(element.path, "deleted"))
+                changed_files.append(ElementDiff(element.path, "deleted", 'dir'))
             else:
                 logger.error(f"Element {element} if not File and not Dir object so there had to be something wrong")
 
@@ -150,38 +159,55 @@ def compare_dirs(source_dir: Dir, replica_dir: Dir, logger: Logger):
 def synch_files(element: ElementDiff, logger: Logger):
     """ Function to synchronize two elements """
     if element.state == 'added':
-        replica_path = element.paths
         #TODO change
-        replica_path.replace('source', 'replica')
-        logger.info(f"File present in replica dir but not in source, removing file: {replica_path} \nfrom replica dir")
-        os.remove(replica_path)
+        logger.info(f"File present in replica dir but not in source, removing file: "
+                    f"{element.paths.replace('source', 'replica')} \nfrom replica dir")
+        # os.remove(replica_path)
+        if isinstance(element.paths, list):
+            source = [path for path in element.paths if 'source' in path][0]
+            replica = [path for path in element.paths if 'replica' in path][0]
+        else:
+            source = element.paths
+            replica = element.paths.replace('source', 'replica')
+        shutil.copyfile(source, replica)
 
     elif element.state == 'deleted':
         #TODO change
         replica_path = element.paths.replace('source', 'replica')
         logger.info(f"File present in source dir but not in source, file was deleted from replica, copying file:"
                     f"{element.paths} to replica dir")
-        shutil.copyfile(element.paths, replica_path)
+        os.remove(replica_path)
+        # shutil.copyfile(element.paths, replica_path)
 
     elif element.state == 'modified':
         logger.info(f"File {element.paths[1]} modified in the replica dir, updating now")
-        shutil.copy2(element.paths[0], element.paths[1])
+        source = [path for path in element.paths if 'source' in path][0]
+        replica = [path for path in element.paths if 'replica' in path][0]
+        shutil.copy2(source, replica)
     else:
         logger.error("Some strange comparison occurred and can not be handled {}".format(element))
 
 
 def synch_directories(element: ElementDiff, logger: Logger):
     """ Function to synchronize directories """
+    print(element)
+    a= 1
+    if isinstance(element.paths, str) and element.element_type == 'dir':
+        # element must be deleted or added
+        if element.state == 'added':
+            shutil.copytree(element.paths, element.paths.replace('source', 'replica'))
+        elif element.state == 'deleted':
+            shutil.rmtree(element.paths)
+    else:
+        for elem in element.paths:
+            if elem.element_type == 'dir':
+                synch_directories(elem, logger)
 
-    for elem in element.paths:
-        if elem.element_type == 'dir':
-            synch_directories(elem, logger)
+            elif elem.element_type == 'file':
+                synch_files(elem, logger)
 
-        elif elem.element_type == 'file':
-            synch_files(elem, logger)
-
-        else:
-            logger.error("Some dirs comparison is strange and cant be handled {}".format(elem))
+            else:
+                logger.error("Some dirs comparison is strange and cant be handled {}".format(elem))
 
 
 if __name__ == '__main__':
@@ -199,7 +225,7 @@ if __name__ == '__main__':
         replica_content = Dir(source, os.path.join(os.getcwd(), replica), logger)
 
         # compare content and synchronize
-        directories_comparison = compare_dirs(replica_content, source_content, logger)
+        directories_comparison = compare_dirs(source_dir=source_content, replica_dir=replica_content, logger=logger)
 
         # synchronize
         for element in directories_comparison:
@@ -208,3 +234,7 @@ if __name__ == '__main__':
 
             elif element.element_type == 'file':
                 synch_files(element, logger)
+
+        #TODO handle time of modifications to make sure files are seen as the same after copying
+        # unify source and replica strings
+        # test
