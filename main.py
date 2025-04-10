@@ -183,7 +183,7 @@ def synch_files(element: ElementDiff, source_dir_name: str, replica_dir_name: st
         replica = [path for path in element.paths if replica_dir_name in path][0]
         logger.info(f"File {source} modified in the replica dir, updating now")
         shutil.copy2(source, replica)
-        # update timeof last modification on both files to avoid unnecessary updating, when copying content the
+        # update time of last modification on both files to avoid unnecessary updating, when copying content the
         # modification dates may not be the same
         time_now = datetime.now()
         os.utime(source, (datetime.timestamp(time_now), datetime.timestamp(time_now)))
@@ -196,7 +196,7 @@ def synch_files(element: ElementDiff, source_dir_name: str, replica_dir_name: st
 def synch_directories(element: ElementDiff,  source_dir_name: str, replica_dir_name: str, logger: Logger):
     """ Function to synchronize directories """
     if isinstance(element.paths, str) and element.element_type == 'dir':
-        # element must be deleted or added
+        # element must have been be deleted or added
         if element.state == 'added':
             logger.info(f'Dir {element.paths} added to source, adding it also to replica')
             shutil.copytree(element.paths, element.paths.replace(source_dir_name, replica_dir_name))
@@ -216,11 +216,15 @@ def synch_directories(element: ElementDiff,  source_dir_name: str, replica_dir_n
 if __name__ == '__main__':
     """
     Arguments:
-        source path
-        replica path
-        synchronization time interval
-        path to logging file
-        -- clear_log - flag which clears passed logging file
+        Parameters:
+            source path
+            replica path
+            synchronization time interval
+            path to logging file
+        Flags:
+            --clear_log - flag which clears passed logging file
+            
+    Example run: python3 ./source ./replica 10 command_line.log --clear_log
     """
     args = sys.argv[1:]
     # check if synchronizer can run

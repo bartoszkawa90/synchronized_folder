@@ -1,2 +1,3 @@
-2025-04-09 16:23:06.777422 INFO: You are running Python program which keeps two directories synchronized
-2025-04-09 16:23:06.777604 INFO: Creating directories trees and verifying difference in source path and replica
+2025-04-10 12:42:22.417791 INFO: You are running Python program which keeps two directories synchronized
+2025-04-10 12:42:22.417927 INFO: Creating directories trees and verifying difference in source path and replica
+2025-04-10 12:42:22.419794 INFO: File /Users/bartoszkawa/Desktop/REPOS/GitHub/synchronized_folder/./source/test_dir/somehtml.html modified in the replica dir, updating now
